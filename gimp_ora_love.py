@@ -14,7 +14,7 @@ from zipfile import ZipFile
 import gimpfu
 from gimp import pdb
 
-def ora_love(img, active_layer, compression, dir_name, should_zip):
+def ora_love(img, active_layer, compression, dir_name, should_merge, should_zip):
     ''' Plugin entry point
     '''
 
@@ -33,7 +33,7 @@ def ora_love(img, active_layer, compression, dir_name, should_zip):
 
     # Save the layer images and metadata
     for layer in img.layers:
-        to_save = process_layer(img, layer, stack, ['data'], base_dir)
+        to_save = process_layer(img, layer, stack, ['data'], base_dir, should_merge)
         save_layers(img, to_save, compression, base_dir)
 
     # Write the thumbnail
@@ -72,11 +72,11 @@ def ora_love(img, active_layer, compression, dir_name, should_zip):
                 os.chdir(old_cwd)
 
 
-def process_layer(img, layer, stack, dir_stack, base_dir):
+def process_layer(img, layer, stack, dir_stack, base_dir, should_merge):
     processed = []
 
     # If this layer is a layer has sublayers, recurse into them
-    if hasattr(layer, 'layers'):
+    if not should_merge and hasattr(layer, 'layers'):
         new_dir_stack = dir_stack + [layer.name]
         try:
             os.makedirs(os.path.join(base_dir, *new_dir_stack))
@@ -84,7 +84,7 @@ def process_layer(img, layer, stack, dir_stack, base_dir):
             if e.errno != errno.EEXIST:
                 raise
         for sublayer in layer.layers:
-            processed.extend(process_layer(img, sublayer, stack, new_dir_stack, base_dir))
+            processed.extend(process_layer(img, sublayer, stack, new_dir_stack, base_dir, should_merge))
     else:
         layer_name = layer.name
         x, y = layer.offsets
@@ -217,6 +217,7 @@ gimpfu.register(
     [
         (gimpfu.PF_ADJUSTMENT, "compression", "PNG Compression level:", 0, (0, 9, 1)),
         (gimpfu.PF_DIRNAME, "dir", "Directory", os.getcwd()),
+        (gimpfu.PF_BOOL, "should_merge", "Merge layer groups?", True),
         (gimpfu.PF_BOOL, "should_zip", "Zip to .ora?", False),
     ],
     # results
