@@ -49,13 +49,14 @@ def ora_love(img, active_layer, compression, dir_name):
             to_save = process_path(path, paths_node, ['paths'])
             save_paths(to_save, base_dir)
 
-
-
     with open(os.path.join(base_dir, 'stack.xml'), 'w') as output_file:
         et.ElementTree(root).write(output_file)
 
     with open(os.path.join(base_dir, 'mimetype'), 'w') as output_file:
         output_file.write('image/openraster')
+
+    # Save the thumbnail
+    save_thumb(img, base_dir)
 
 def process_layer(img, layer, stack, dir_stack, base_dir):
     processed = []
@@ -149,6 +150,30 @@ def save_paths(paths, base_dir):
         with open(os.path.join(base_dir, rel_path), 'w') as f:
             writer = csv.writer(f)
             writer.writerows(path_data)
+
+def save_thumb(img, base_dir):
+    tmp_img = pdb.gimp_image_new(img.width, img.height, img.base_type)
+    for i, layer in enumerate(img.layers):
+        tmp_layer = pdb.gimp_layer_new_from_drawable(layer, tmp_img)
+        tmp_img.add_layer(tmp_layer, i)
+    flattened = tmp_img.flatten()
+
+    max_dim = 255
+    if img.width > max_dim or img.height > max_dim:
+        if img.width > img.height:
+            width = max_dim
+            height = width * img.height / img.width
+        elif img.width < img.height:
+            height = max_dim
+            width = height * img.width / img.height
+        else:
+            width = height = max_dim
+        pdb.gimp_image_scale(tmp_img, width, height)
+
+    thumb_path = os.path.join(base_dir, 'Thumbnails')
+    mkdirs(thumb_path)
+    thumb_filename = 'thumbnail.png'
+    pdb.file_png_save_defaults(tmp_img, flattened, os.path.join(thumb_path, thumb_filename), thumb_filename)
 
 gimpfu.register(
     # name
