@@ -165,7 +165,7 @@ def save_paths(paths, base_dir):
     for rel_path, path_data in paths:
         rel_path = rel_path.replace('/', os.sep)
         with open(os.path.join(base_dir, rel_path), 'w') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, lineterminator='\n')
             writer.writerows(path_data)
 
 def save_thumb(img, base_dir):
