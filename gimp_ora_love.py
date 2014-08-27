@@ -8,6 +8,7 @@ import csv
 import errno
 import os.path
 import shutil
+import urlparse
 import xml.etree.cElementTree as et
 from zipfile import ZipFile
 
@@ -74,13 +75,13 @@ def ora_love(img, active_layer, compression, dir_name, should_merge, should_zip)
             finally:
                 os.chdir(old_cwd)
 
-
 def process_layer(img, layer, stack, dir_stack, base_dir, should_merge):
     processed = []
+    layer_name, attributes = parse_attributes(layer.name)
 
     # If this layer is a layer has sublayers, recurse into them
     if not should_merge and hasattr(layer, 'layers'):
-        new_dir_stack = dir_stack + [layer.name]
+        new_dir_stack = dir_stack + [layer_name]
         try:
             os.makedirs(os.path.join(base_dir, *new_dir_stack))
         except OSError, e:
@@ -89,7 +90,6 @@ def process_layer(img, layer, stack, dir_stack, base_dir, should_merge):
         for sublayer in layer.layers:
             processed.extend(process_layer(img, sublayer, stack, new_dir_stack, base_dir, should_merge))
     else:
-        layer_name = layer.name
         x, y = layer.offsets
         filename = '/'.join(dir_stack + ['%s.png' % layer_name])
 
@@ -103,6 +103,9 @@ def process_layer(img, layer, stack, dir_stack, base_dir, should_merge):
         layer_node.set('composite-op', 'svg:src-over')
         layer_node.set('opacity', '1.0')
         layer_node.set('visibility', 'visible')
+
+        # Set the custom attributes, if any
+        set_custom_attributes(layer_node, attributes)
 
         processed.append((filename, layer))
 
@@ -137,6 +140,7 @@ def save_layers(img, layers, compression, base_dir):
 def process_path(path, paths_node, base_dir):
     data = [[None] * 8]
     strokes_count = 0
+    path_name, attributes = parse_attributes(path.name)
 
     for stroke in path.strokes:
         strokes_count = strokes_count+1
@@ -144,20 +148,21 @@ def process_path(path, paths_node, base_dir):
 
         # copy triplets
         for triplet in range(0, len(stroke_points), 6):
-            row = [path.name, strokes_count]
+            row = [path_name, strokes_count]
             row.extend(stroke_points[triplet:triplet + 6])
             data.append(row)
         # for closed stroke, close with first triplet
         if is_closed:
-            row = [path.name, strokes_count]
+            row = [path_name, strokes_count]
             row.extend(stroke_points[:6])
             data.append(row)
 
-    filename = '/'.join(base_dir + ['%s.csv' % path.name])
+    filename = '/'.join(base_dir + ['%s.csv' % path_name])
 
     path_node = et.SubElement(paths_node, 'path')
-    path_node.set('name', path.name)
+    path_node.set('name', path_name)
     path_node.set('src', filename)
+    set_custom_attributes(path_node, attributes)
 
     return [(filename, data)]
 
@@ -192,6 +197,8 @@ def save_thumb(img, base_dir):
     thumb_filename = 'thumbnail.png'
     pdb.file_png_save_defaults(tmp_img, flattened, os.path.join(thumb_path, thumb_filename), thumb_filename)
 
+# Helper functions
+
 def mkdirs(dir_name):
     try:
         os.makedirs(dir_name)
@@ -199,6 +206,17 @@ def mkdirs(dir_name):
         if e.errno != errno.EEXIST:
             raise
 
+def parse_attributes(unparsed_name):
+    parsed = urlparse.urlparse(unparsed_name)
+    layer_name = parsed.path
+    attributes = urlparse.parse_qs(parsed.query)
+    return layer_name, attributes
+
+def set_custom_attributes(node, attributes):
+    for key, vals in attributes.iteritems():
+        node.set(key, ','.join(vals))
+
+# Initialization
 gimpfu.register(
     # name
     "ora-love",
