@@ -7,56 +7,55 @@ extra metadata usefule for importing into LOVE games.
 import csv
 import errno
 import os.path
+import shutil
 import xml.etree.cElementTree as et
 
 import gimpfu
 from gimp import pdb
 
-def mkdirs(dir_name):
-    try:
-        os.makedirs(dir_name)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            raise
-
 def ora_love(img, active_layer, compression, dir_name):
     ''' Plugin entry point
     '''
+
+    # Create the root now
     root = et.Element('image')
     root.set('w', unicode(img.width))
     root.set('h', unicode(img.height))
     stack = et.SubElement(root, 'stack')
 
+    # Create the image directory
     name = os.path.splitext(os.path.basename(img.filename))[0]
     base_dir = os.path.join(dir_name, name)
+    if os.access(base_dir, os.F_OK):
+        shutil.rmtree(base_dir, ignore_errors=False)
     mkdirs(os.path.join(base_dir, 'data'))
 
+    # Save the layer images and metadata
     for layer in img.layers:
         to_save = process_layer(img, layer, stack, ['data'], base_dir)
         save_layers(img, to_save, compression, base_dir)
 
-    # Save the paths
-    paths_path = os.path.join(base_dir, 'paths')
-    try:
-        os.makedirs(paths_path)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            raise
+    # Write the thumbnail
+    save_thumb(img, base_dir)
 
     if len(img.vectors) > 0:
+        # Create the path directory
+        paths_path = os.path.join(base_dir, 'paths')
+        mkdirs(paths_path)
+
+        # Save the paths and metadata
         paths_node = et.SubElement(root, 'paths')
         for path in img.vectors:
             to_save = process_path(path, paths_node, ['paths'])
             save_paths(to_save, base_dir)
 
-    with open(os.path.join(base_dir, 'stack.xml'), 'w') as output_file:
-        et.ElementTree(root).write(output_file)
-
+    # Write the mimetype file
     with open(os.path.join(base_dir, 'mimetype'), 'w') as output_file:
         output_file.write('image/openraster')
 
-    # Save the thumbnail
-    save_thumb(img, base_dir)
+    # Write the metadata file
+    with open(os.path.join(base_dir, 'stack.xml'), 'w') as output_file:
+        et.ElementTree(root).write(output_file)
 
 def process_layer(img, layer, stack, dir_stack, base_dir):
     processed = []
@@ -175,6 +174,13 @@ def save_thumb(img, base_dir):
     thumb_filename = 'thumbnail.png'
     pdb.file_png_save_defaults(tmp_img, flattened, os.path.join(thumb_path, thumb_filename), thumb_filename)
 
+def mkdirs(dir_name):
+    try:
+        os.makedirs(dir_name)
+    except OSError, e:
+        if e.errno != errno.EEXIST:
+            raise
+
 gimpfu.register(
     # name
     "ora-love",
@@ -195,7 +201,7 @@ gimpfu.register(
     # params
     [
         (gimpfu.PF_ADJUSTMENT, "compression", "PNG Compression level:", 0, (0, 9, 1)),
-        (gimpfu.PF_DIRNAME, "dir", "Directory", "/tmp")
+        (gimpfu.PF_DIRNAME, "dir", "Directory", os.getcwd())
     ],
     # results
     [],
