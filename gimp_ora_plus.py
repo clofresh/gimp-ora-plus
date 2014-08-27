@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 Exports layers and paths to OpenRaster compatible file with
-extra metadata usefule for importing into LOVE games.
+extra metadata useful for importing into other systems, like games.
 '''
 
 import csv
@@ -15,7 +15,7 @@ from zipfile import ZipFile
 import gimpfu
 from gimp import pdb
 
-def ora_love(img, active_layer, compression, dir_name, should_merge, should_zip):
+def ora_plus(img, active_layer, compression, dir_name, should_merge, should_zip):
     ''' Plugin entry point
     '''
 
@@ -220,11 +220,11 @@ def set_custom_attributes(node, attributes):
 # Initialization
 gimpfu.register(
     # name
-    "ora-love",
+    "ora-plus",
     # blurb
-    "OpenRaster-love exporter",
+    "OpenRaster Plus exporter",
     # help
-    "Exports layers and paths to OpenRaster file with extra metadata useful for importing into LOVE games",
+    "Exports layers and paths to OpenRaster compatible file with extra metadata useful for importing into other systems, like games.",
     # author
     "Carlo Cabanilla",
     # copyright
@@ -232,7 +232,7 @@ gimpfu.register(
     # date
     "2014",
     # menupath
-    "<Image>/File/Export/Export as ora-love",
+    "<Image>/File/Export/Export as OpenRaster Plus",
     # imagetypes
     "*",
     # params
@@ -245,7 +245,7 @@ gimpfu.register(
     # results
     [],
     # function
-    ora_love
+    ora_plus
 )
 
 gimpfu.main()
