@@ -9,11 +9,12 @@ import errno
 import os.path
 import shutil
 import xml.etree.cElementTree as et
+from zipfile import ZipFile
 
 import gimpfu
 from gimp import pdb
 
-def ora_love(img, active_layer, compression, dir_name):
+def ora_love(img, active_layer, compression, dir_name, should_zip):
     ''' Plugin entry point
     '''
 
@@ -56,6 +57,20 @@ def ora_love(img, active_layer, compression, dir_name):
     # Write the metadata file
     with open(os.path.join(base_dir, 'stack.xml'), 'w') as output_file:
         et.ElementTree(root).write(output_file)
+
+    # Zip it, if requested
+    if should_zip:
+        with ZipFile(os.path.join(dir_name, '%s.ora' % name), 'w') as f:
+            old_cwd = os.getcwd()
+            os.chdir(base_dir)
+            try:
+                for root, dirs, files in os.walk('.'):
+                    for filename in files:
+                        full_path = os.path.join(root, filename)
+                        f.write(full_path, full_path[2:])
+            finally:
+                os.chdir(old_cwd)
+
 
 def process_layer(img, layer, stack, dir_stack, base_dir):
     processed = []
@@ -201,7 +216,8 @@ gimpfu.register(
     # params
     [
         (gimpfu.PF_ADJUSTMENT, "compression", "PNG Compression level:", 0, (0, 9, 1)),
-        (gimpfu.PF_DIRNAME, "dir", "Directory", os.getcwd())
+        (gimpfu.PF_DIRNAME, "dir", "Directory", os.getcwd()),
+        (gimpfu.PF_BOOL, "should_zip", "Zip to .ora?", False),
     ],
     # results
     [],
