@@ -74,6 +74,7 @@ def ora_love(img, active_layer, compression, dir_name, should_merge, should_zip)
                         f.write(full_path, full_path[2:])
             finally:
                 os.chdir(old_cwd)
+        shutil.rmtree(base_dir, ignore_errors=False)
 
 def process_layer(img, layer, stack, dir_stack, base_dir, should_merge):
     processed = []
