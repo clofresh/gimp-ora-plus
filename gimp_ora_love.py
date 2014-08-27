@@ -56,7 +56,10 @@ def ora_love(img, active_layer, compression, dir_name, should_merge, should_zip)
 
     # Write the metadata file
     with open(os.path.join(base_dir, 'stack.xml'), 'w') as output_file:
-        et.ElementTree(root).write(output_file)
+        et.ElementTree(root).write(output_file,
+                                   xml_declaration=True,
+                                   encoding='utf-8',
+                                   method='xml')
 
     # Zip it, if requested
     if should_zip:
